@@ -53,6 +53,9 @@ client.once('clientReady', () => {
 client.on('error', console.error);
 process.on('unhandledRejection', console.error);
 
+let connection = null;
+let currentChannelId = null;
+
 const sendMessageToChannel = async (text, channelId) => {
     const textChannel = await client.channels.fetch(channelId);
     
@@ -63,13 +66,17 @@ const sendMessageToChannel = async (text, channelId) => {
 
 const playTextAtChannel = async (text, voiceChannel) => {
   try {
-    const connection = joinVoiceChannel({
-      channelId: voiceChannel.id,
-      guildId: voiceChannel.guild.id,
-      adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-    });
+    if (!connection || currentChannelId !== voiceChannel.id) {
+      connection = joinVoiceChannel({
+        channelId: voiceChannel.id,
+        guildId: voiceChannel.guild.id,
+        adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+      });
 
-    await entersState(connection, VoiceConnectionStatus.Ready, 5000);
+      currentChannelId = voiceChannel.id;
+
+      await entersState(connection, VoiceConnectionStatus.Ready, 5000);
+    }
 
     const url = googleTTS.getAudioUrl(text, {
       lang: 'es',
@@ -77,16 +84,20 @@ const playTextAtChannel = async (text, voiceChannel) => {
     });
 
     const player = createAudioPlayer();
-
     const response = await fetch(url);
-
     const resource = createAudioResource(response.body);
 
     player.play(resource);
     connection.subscribe(player);
 
     player.on(AudioPlayerStatus.Idle, () => {
-      connection.destroy();
+      setTimeout(() => {
+        if (voiceChannel.members.size <= 1) {
+          connection.destroy();
+          connection = null;
+          currentChannelId = null;
+        }
+      }, 3000);
     });
 
     player.on('error', (err) => {
@@ -103,24 +114,27 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 client.on('voiceStateUpdate', async (oldState, newState) => {
 
-    if (newState.member?.user?.bot) return;
+  if (newState.member?.user?.bot) return;
 
-    const joinedChannel = oldState.channelId !== newState.channelId && newState.channelId;
+  if (oldState.channelId === newState.channelId) return;
+
+  const joinedChannel = newState.channelId;
   
-    if (!joinedChannel) return;
+  if (!joinedChannel) return;
 
-    if (newState.channelId !== TARGET_VOICE_CHANNEL_ID) return;
+  if (newState.channelId !== TARGET_VOICE_CHANNEL_ID) return;
 
-    const userData = users[newState.id];
-    const name = newState.member?.displayName || newState.member?.user?.username || "usuario";
-    const textMessage = userData?.message ?? `Bienvenido ${name}`;
-    const textVoice = userData?.greeting ?? `${name} se unió!`;
+  const userData = users[newState.id];
+  const name = newState.member?.displayName || newState.member?.user?.username || "usuario";
 
-    try {
-        const voiceChannel = newState.channel;
-        await sendMessageToChannel(textMessage, TEXT_CHANNEL_ID);
-        await delay(1000);
-        await playTextAtChannel(textVoice, voiceChannel);
+  const textMessage = userData?.message ?? `Bienvenido ${name}`;
+  const textVoice = userData?.greeting ?? `${name} se unió!`;
+
+  try {
+      const voiceChannel = newState.channel;
+      await sendMessageToChannel(textMessage, TEXT_CHANNEL_ID);
+      await delay(1000);
+      await playTextAtChannel(textVoice, voiceChannel);
     } catch (err) {
         console.error("Error en voiceStateUpdate:", err);
     }
