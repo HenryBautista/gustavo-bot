@@ -103,6 +103,8 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 client.on('voiceStateUpdate', async (oldState, newState) => {
 
+    if (newState.member?.user?.bot) return;
+
     const joinedChannel = oldState.channelId !== newState.channelId && newState.channelId;
   
     if (!joinedChannel) return;
