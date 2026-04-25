@@ -110,8 +110,9 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     if (newState.channelId !== TARGET_VOICE_CHANNEL_ID) return;
 
     const userData = users[newState.id];
-    const textMessage = userData ? userData.message : `Bienvenido ${newState.member.displayName}`
-    const textVoice = userData ? userData.greeting : `${newState.member.displayName} se unio!`
+    const name = newState.member?.displayName || newState.member?.user?.username || "usuario";
+    const textMessage = userData?.message ?? `Bienvenido ${name}`;
+    const textVoice = userData?.greeting ?? `${name} se unió!`;
 
     try {
         const voiceChannel = newState.channel;
