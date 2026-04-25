@@ -149,7 +149,7 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
 
   try {
       const voiceChannel = newState.channel;
-      await sendMessageToChannel(textMessage, TEXT_CHANNEL_ID);
+      //await sendMessageToChannel(textMessage, TEXT_CHANNEL_ID);
       await delay(1000);
       await playTextAtChannel(textVoice, voiceChannel);
     } catch (err) {
