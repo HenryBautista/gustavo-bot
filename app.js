@@ -66,7 +66,12 @@ const sendMessageToChannel = async (text, channelId) => {
 
 const playTextAtChannel = async (text, voiceChannel) => {
   try {
-    if (!connection || currentChannelId !== voiceChannel.id) {
+    if (
+      !connection ||
+      connection.state.status === VoiceConnectionStatus.Destroyed ||
+      connection.state.status === VoiceConnectionStatus.Disconnected ||
+      currentChannelId !== voiceChannel.id
+    ) {
       connection = joinVoiceChannel({
         channelId: voiceChannel.id,
         guildId: voiceChannel.guild.id,
@@ -74,6 +79,18 @@ const playTextAtChannel = async (text, voiceChannel) => {
       });
 
       currentChannelId = voiceChannel.id;
+
+      connection.on('stateChange', (oldState, newState) => {
+        console.log(`Voice: ${oldState.status} -> ${newState.status}`);
+
+        if (
+          newState.status === VoiceConnectionStatus.Destroyed ||
+          newState.status === VoiceConnectionStatus.Disconnected
+        ) {
+          connection = null;
+          currentChannelId = null;
+        }
+      });
 
       await entersState(connection, VoiceConnectionStatus.Ready, 5000);
     }
