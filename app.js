@@ -40,8 +40,8 @@ const users = {
         name: 'Zhay'
     },
     "758671468783075359": {
-        message: 'Hola Texto',
-        greeting: 'Hola',
+        message: 'Hola Padre',
+        greeting: 'Hola padre',
         name: 'Cinder'
     }
 }
