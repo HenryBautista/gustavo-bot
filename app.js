@@ -1,6 +1,6 @@
 require('dotenv').config();
-
 const ffmpegPath = require('ffmpeg-static');
+const { entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 process.env.FFMPEG_PATH = ffmpegPath;
 
 const { Client, GatewayIntentBits } = require('discord.js');
@@ -61,32 +61,42 @@ const sendMessageToChannel = async (text, channelId) => {
     }
 }
 
-const playTextAtChannel = (text, voiceChannel) => {
-    
+const playTextAtChannel = async (text, voiceChannel) => {
+  try {
     const connection = joinVoiceChannel({
-        channelId: voiceChannel.id,
-        guildId: voiceChannel.guild.id,
-        adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+      channelId: voiceChannel.id,
+      guildId: voiceChannel.guild.id,
+      adapterCreator: voiceChannel.guild.voiceAdapterCreator,
     });
 
+    await entersState(connection, VoiceConnectionStatus.Ready, 5000);
+
     const url = googleTTS.getAudioUrl(text, {
-        lang: 'es',
-        slow: false,
+      lang: 'es',
+      slow: false,
     });
 
     const player = createAudioPlayer();
 
-    const resource = createAudioResource(url, {
-        inputType: StreamType.Arbitrary,
-    });
+    const response = await fetch(url);
+
+    const resource = createAudioResource(response.body);
 
     player.play(resource);
     connection.subscribe(player);
 
     player.on(AudioPlayerStatus.Idle, () => {
-        connection.destroy();
+      connection.destroy();
     });
-}
+
+    player.on('error', (err) => {
+      console.error("Audio error:", err);
+    });
+
+  } catch (err) {
+    console.error("Error en playTextAtChannel:", err);
+  }
+};
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -105,9 +115,9 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
 
     try {
         const voiceChannel = newState.channel;
-        sendMessageToChannel(userData.message, TEXT_CHANNEL_ID);
+        await sendMessageToChannel(userData.message, TEXT_CHANNEL_ID);
         await delay(1000);
-        playTextAtChannel(userData.greeting, voiceChannel);
+        await playTextAtChannel(userData.greeting, voiceChannel);
     } catch (err) {
         console.error("Error en voiceStateUpdate:", err);
     }
