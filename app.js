@@ -31,7 +31,7 @@ const TARGET_VOICE_CHANNEL_ID = "1458616507415400554";
 const users = {
     "1153041199129698354": {
         message: `Un negro acaba de entrar 👀`,
-        greeting: `Cuiden sus carteras un Veneco acaba de entrar!`,
+        greeting: `Un Veneco acaba de entrar!`,
         name: 'Alonzo'
     },
     "515647010804596757": {
@@ -110,14 +110,14 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     if (newState.channelId !== TARGET_VOICE_CHANNEL_ID) return;
 
     const userData = users[newState.id];
-
-    if (!userData) return;
+    const textMessage = userData ? userData.message : `Bienvenido ${newState.member.displayName}`
+    const textVoice = userData ? userData.greeting : `${newState.member.displayName} se unio!`
 
     try {
         const voiceChannel = newState.channel;
-        await sendMessageToChannel(userData.message, TEXT_CHANNEL_ID);
+        await sendMessageToChannel(textMessage, TEXT_CHANNEL_ID);
         await delay(1000);
-        await playTextAtChannel(userData.greeting, voiceChannel);
+        await playTextAtChannel(textVoice, voiceChannel);
     } catch (err) {
         console.error("Error en voiceStateUpdate:", err);
     }
