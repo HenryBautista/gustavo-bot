@@ -43,6 +43,12 @@ const users = {
         message: 'Hola Padre',
         greeting: 'Hola padre',
         name: 'Cinder'
+    },
+    "1399448990772232464": {
+        message: 'croissant',
+        greeting: 'croissant',
+        name: 'Blue',
+        lang: 'fr'
     }
 }
 
@@ -64,7 +70,7 @@ const sendMessageToChannel = async (text, channelId) => {
     }
 }
 
-const playTextAtChannel = async (text, voiceChannel) => {
+const playTextAtChannel = async (text, voiceChannel, lang) => {
   try {
     if (
       !connection ||
@@ -96,7 +102,7 @@ const playTextAtChannel = async (text, voiceChannel) => {
     }
 
     const url = googleTTS.getAudioUrl(text, {
-      lang: 'es',
+      lang: lang,
       slow: false,
     });
 
@@ -146,12 +152,13 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
 
   const textMessage = userData?.message ?? `Bienvenido ${name}`;
   const textVoice = userData?.greeting ?? `${name} se unió!`;
+  const lang = userData?.lang || 'es';
 
   try {
       const voiceChannel = newState.channel;
       //await sendMessageToChannel(textMessage, TEXT_CHANNEL_ID);
       await delay(1000);
-      await playTextAtChannel(textVoice, voiceChannel);
+      await playTextAtChannel(textVoice, voiceChannel, lang);
     } catch (err) {
         console.error("Error en voiceStateUpdate:", err);
     }
