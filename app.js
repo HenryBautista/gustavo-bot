@@ -39,8 +39,8 @@ const users = {
     name: 'Alonzo'
   },
   "515647010804596757": {
-    message: 'Bienvenido my Fiurer!',
-    greeting: 'Bienvenido my Fiurer!',
+    message: 'Taquitos',
+    greeting: 'Taquitos',
     name: 'Zhay'
   },
   "758671468783075359": {
