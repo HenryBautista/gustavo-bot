@@ -141,3 +141,6 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# play-dl cache (YouTube player scripts descargados automáticamente)
+*-player-script.js
