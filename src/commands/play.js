@@ -2,7 +2,9 @@ const { getManager } = require('../music/GuildMusicManager');
 const youtube = require('../music/sources/youtube');
 const spotify = require('../music/sources/spotify');
 const navidrome = require('../music/sources/navidrome');
+const { getResolver } = require('../music/playlists');
 
+const PLAYLIST_LIMIT = 50;
 const YT_URL_RE = /(?:youtube\.com\/(?:watch|shorts)|youtu\.be\/)/;
 
 module.exports = {
@@ -28,6 +30,17 @@ module.exports = {
     await message.react('⏳').catch(() => {});
 
     try {
+      const resolver = getResolver(input);
+      if (resolver) {
+        const { name, tracks } = await resolver.resolve(input);
+        const limited = tracks.slice(0, PLAYLIST_LIMIT);
+        const wasIdle = await manager.addMany(limited, voiceChannel, message.channel);
+        await message.reactions.removeAll().catch(() => {});
+        const limitNote = tracks.length > PLAYLIST_LIMIT ? ` (mostrando ${PLAYLIST_LIMIT} de ${tracks.length})` : '';
+        const verb = wasIdle ? '▶️ Reproduciendo playlist' : '✅ Playlist añadida a la cola';
+        return message.reply(`${verb}: **${name}** — ${limited.length} canciones${limitNote}`);
+      }
+
       let track;
 
       if (input.toLowerCase().startsWith('nav:')) {

@@ -72,6 +72,18 @@ class GuildMusicManager {
     console.log(`[Music:${this.guildId}] Conexión lista`);
   }
 
+  async addMany(tracks, voiceChannel, textChannel = null) {
+    if (textChannel) this.textChannel = textChannel;
+    await this.ensureConnection(voiceChannel);
+    const wasIdle = this.currentTrack === null && this.queue.length === 0;
+    this.queue.push(...tracks);
+    console.log(`[Music:${this.guildId}] ${tracks.length} tracks añadidos (cola: ${this.queue.length})`);
+    if (this.player.state.status === AudioPlayerStatus.Idle && this.currentTrack === null) {
+      this._playNext();
+    }
+    return wasIdle;
+  }
+
   async add(track, voiceChannel, textChannel = null) {
     if (textChannel) this.textChannel = textChannel;
     await this.ensureConnection(voiceChannel);

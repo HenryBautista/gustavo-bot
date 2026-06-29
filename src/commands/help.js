@@ -13,7 +13,7 @@ module.exports = {
       .addFields(
         {
           name: `\`${p}play <búsqueda|URL>\` · \`${p}p\``,
-          value: 'Reproduce de YouTube, una URL de Spotify, o usa `nav:<búsqueda>` para tu librería en Navidrome',
+          value: 'YouTube, URL de Spotify, `nav:<búsqueda>` para Navidrome · Playlists: URL de YouTube playlist, `nav:pl:<nombre>` para playlist de Navidrome',
         },
         { name: `\`${p}skip\` · \`${p}s\``, value: 'Salta la canción actual' },
         { name: `\`${p}stop\``, value: 'Para la reproducción, limpia la cola y desconecta el bot' },
@@ -23,7 +23,7 @@ module.exports = {
         { name: `\`${p}np\` · \`${p}nowplaying\``, value: 'Muestra la canción que se está reproduciendo' },
         { name: `\`${p}help\` · \`${p}h\``, value: 'Muestra este mensaje' },
       )
-      .setFooter({ text: `Ejemplos: ${p}play lo fi | ${p}play nav:jazz | ${p}play https://open.spotify.com/track/...` });
+      .setFooter({ text: `Ejemplos: ${p}play lo fi | ${p}play nav:jazz | ${p}play nav:pl:Favoritos | ${p}play https://youtube.com/playlist?list=...` });
 
     message.reply({ embeds: [embed] });
   },

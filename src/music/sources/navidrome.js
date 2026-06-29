@@ -69,4 +69,52 @@ function buildStreamUrl(songId) {
   return `${process.env.NAVIDROME_URL}/rest/stream.view?${buildAuthParams()}&${params}`;
 }
 
-module.exports = { search, buildStreamUrl };
+async function getPlaylists() {
+  validateConfig();
+  console.log('[Navidrome] Obteniendo lista de playlists');
+  const url = `${process.env.NAVIDROME_URL}/rest/getPlaylists.view?${buildAuthParams()}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Navidrome getPlaylists HTTP ${res.status}`);
+  const data = await res.json();
+  const response = data['subsonic-response'];
+  if (response.status !== 'ok') {
+    throw new Error(`Navidrome error: ${response.error?.message || 'Desconocido'}`);
+  }
+  const list = response.playlists?.playlist ?? [];
+  return (Array.isArray(list) ? list : [list]).map((pl) => ({
+    id: pl.id,
+    name: pl.name,
+    songCount: pl.songCount ?? 0,
+  }));
+}
+
+async function getPlaylist(id) {
+  validateConfig();
+  console.log(`[Navidrome] Cargando playlist id=${id}`);
+  const extra = new URLSearchParams({ id: String(id) });
+  const url = `${process.env.NAVIDROME_URL}/rest/getPlaylist.view?${buildAuthParams()}&${extra}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Navidrome getPlaylist HTTP ${res.status}`);
+  const data = await res.json();
+  const response = data['subsonic-response'];
+  if (response.status !== 'ok') {
+    throw new Error(`Navidrome error: ${response.error?.message || 'Desconocido'}`);
+  }
+  const pl = response.playlist;
+  const entries = pl.entry ?? [];
+  const songs = Array.isArray(entries) ? entries : [entries];
+  console.log(`[Navidrome] Playlist "${pl.name}": ${songs.length} canciones`);
+  return {
+    name: pl.name,
+    tracks: songs.map((song) => ({
+      title: `${song.title} — ${song.artist}`,
+      navSongId: song.id,
+      duration: song.duration ?? 0,
+      source: 'navidrome',
+      thumbnail: null,
+      quality: song.bitRate ? `${song.bitRate} kbps` : null,
+    })),
+  };
+}
+
+module.exports = { search, buildStreamUrl, getPlaylists, getPlaylist };
