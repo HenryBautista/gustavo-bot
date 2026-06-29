@@ -1,0 +1,28 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write .env
+        run: |
+          echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" >> .env
+          echo "APP_ID=${{ secrets.APP_ID }}" >> .env
+          echo "PUBLIC_KEY=${{ secrets.PUBLIC_KEY }}" >> .env
+          echo "PREFIX=${{ secrets.PREFIX }}" >> .env
+          echo "NAVIDROME_URL=${{ secrets.NAVIDROME_URL }}" >> .env
+          echo "NAVIDROME_USER=${{ secrets.NAVIDROME_USER }}" >> .env
+          echo "NAVIDROME_PASS=${{ secrets.NAVIDROME_PASS }}" >> .env
+
+      - name: Rebuild and restart
+        run: |
+          docker compose down
+          docker compose build --no-cache
+          docker compose up -d
