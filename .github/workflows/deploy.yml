@@ -1,11 +1,14 @@
 name: Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
     branches: [main]
+    types: [completed]
 
 jobs:
   deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: self-hosted
 
     steps:
@@ -21,8 +24,7 @@ jobs:
           echo "NAVIDROME_USER=${{ secrets.NAVIDROME_USER }}" >> .env
           echo "NAVIDROME_PASS=${{ secrets.NAVIDROME_PASS }}" >> .env
 
-      - name: Rebuild and restart
+      - name: Build and restart
         run: |
-          docker compose down
-          docker compose build --no-cache
-          docker compose up -d
+          docker compose build
+          docker compose up -d --force-recreate
