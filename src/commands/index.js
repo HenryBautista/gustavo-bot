@@ -7,6 +7,7 @@ const commandModules = [
   require('./pause'),
   require('./resume'),
   require('./queue'),
+  require('./clear'),
   require('./nowplaying'),
   require('./help'),
 ];

@@ -20,6 +20,7 @@ module.exports = {
         { name: `\`${p}pause\``, value: 'Pausa la reproducción' },
         { name: `\`${p}resume\` · \`${p}r\``, value: 'Reanuda la reproducción pausada' },
         { name: `\`${p}queue\` · \`${p}q\``, value: 'Muestra la cola de reproducción (hasta 10 canciones)' },
+        { name: `\`${p}clear\` · \`${p}cl\``, value: 'Vacía la cola sin detener la canción actual' },
         { name: `\`${p}np\` · \`${p}nowplaying\``, value: 'Muestra la canción que se está reproduciendo' },
         { name: `\`${p}help\` · \`${p}h\``, value: 'Muestra este mensaje' },
       )
