@@ -7,8 +7,8 @@ describe('YoutubePlaylistResolver.canResolve', () => {
     expect(ytResolver.canResolve('https://www.youtube.com/playlist?list=PLabc123')).toBe(true);
   });
 
-  test('does NOT match watch?v=...&list= (single track in playlist context)', () => {
-    expect(ytResolver.canResolve('https://www.youtube.com/watch?v=abc123&list=PLxxx')).toBe(false);
+  test('matches watch?v=...&list= (video in playlist context)', () => {
+    expect(ytResolver.canResolve('https://www.youtube.com/watch?v=abc123&list=PLxxx')).toBe(true);
   });
 
   test('does NOT match plain YouTube watch URL', () => {
@@ -79,7 +79,7 @@ describe('getResolver factory', () => {
     expect(getResolver('https://www.youtube.com/watch?v=abc123')).toBeNull();
   });
 
-  test('returns null for watch?v=...&list= (single track context)', () => {
-    expect(getResolver('https://www.youtube.com/watch?v=abc&list=PLxxx')).toBeNull();
+  test('returns YoutubePlaylistResolver for watch?v=...&list= URL', () => {
+    expect(getResolver('https://www.youtube.com/watch?v=abc&list=PLxxx')).toBe(ytResolver);
   });
 });
