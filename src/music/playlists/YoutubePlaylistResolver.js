@@ -1,8 +1,7 @@
 const { spawn } = require('child_process');
 const BasePlaylistResolver = require('./BasePlaylistResolver');
 
-// Only matches pure playlist URLs, not watch?v=...&list=... (those stay as single tracks)
-const PLAYLIST_URL_RE = /youtube\.com\/playlist\?.*list=/;
+const PLAYLIST_URL_RE = /youtube\.com\/(?:playlist\?.*list=|watch\?.*list=)/;
 
 function getBin() {
   return process.env.YTDLP_PATH || 'yt-dlp';
