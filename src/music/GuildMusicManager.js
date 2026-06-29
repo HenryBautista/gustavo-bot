@@ -163,6 +163,13 @@ class GuildMusicManager {
     this.player.stop();
   }
 
+  clearQueue() {
+    const count = this.queue.length;
+    this.queue = [];
+    console.log(`[Music:${this.guildId}] Cola limpiada (${count} tracks eliminados)`);
+    return count;
+  }
+
   stop() {
     console.log(`[Music:${this.guildId}] Stop: limpiando cola (${this.queue.length} tracks) y desconectando`);
     this.queue = [];

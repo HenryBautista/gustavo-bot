@@ -152,6 +152,32 @@ describe('GuildMusicManager.pause and resume', () => {
   });
 });
 
+describe('GuildMusicManager.clearQueue', () => {
+  test('vacía la cola y devuelve el número de tracks eliminados', () => {
+    const manager = freshManager();
+    manager.queue = [track({ title: 'A' }), track({ title: 'B' }), track({ title: 'C' })];
+    const count = manager.clearQueue();
+    expect(manager.queue).toHaveLength(0);
+    expect(count).toBe(3);
+  });
+
+  test('no afecta currentTrack', () => {
+    const manager = freshManager();
+    const playing = track({ title: 'Now Playing' });
+    manager.currentTrack = playing;
+    manager.queue = [track(), track()];
+    manager.clearQueue();
+    expect(manager.currentTrack).toBe(playing);
+  });
+
+  test('devuelve 0 cuando la cola ya está vacía', () => {
+    const manager = freshManager();
+    const count = manager.clearQueue();
+    expect(count).toBe(0);
+    expect(manager.queue).toHaveLength(0);
+  });
+});
+
 describe('GuildMusicManager guild isolation', () => {
   test('different guild IDs get independent queues', async () => {
     const m1 = freshManager();
