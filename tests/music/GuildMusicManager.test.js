@@ -23,7 +23,10 @@ jest.mock('@discordjs/voice', () => ({
   joinVoiceChannel: jest.fn(() => mockConnection),
 }));
 
-jest.mock('../../src/music/sources/ytdlp', () => ({ stream: jest.fn() }));
+const mockYtdlpProc = { kill: jest.fn() };
+jest.mock('../../src/music/sources/ytdlp', () => ({
+  stream: jest.fn(() => ({ stream: {}, process: mockYtdlpProc })),
+}));
 
 const { getManager } = require('../../src/music/GuildMusicManager');
 
@@ -185,5 +188,38 @@ describe('GuildMusicManager guild isolation', () => {
     await m1.add(track({ title: 'Guild 1 Song' }), mockVoiceChannel);
     expect(m1.queue).toHaveLength(1);
     expect(m2.queue).toHaveLength(0);
+  });
+});
+
+describe('GuildMusicManager — yt-dlp process cleanup', () => {
+  test('stop() calls kill on the current yt-dlp process when one exists', () => {
+    const manager = freshManager();
+    const fakeProc = { kill: jest.fn() };
+    manager._currentYtdlpProc = fakeProc;
+    manager.connection = { destroy: jest.fn() };
+    manager.stop();
+    expect(fakeProc.kill).toHaveBeenCalledWith('SIGKILL');
+  });
+
+  test('stop() is safe when no yt-dlp process is running', () => {
+    const manager = freshManager();
+    manager.connection = { destroy: jest.fn() };
+    expect(() => manager.stop()).not.toThrow();
+  });
+
+  test('_currentYtdlpProc is null after stop()', () => {
+    const manager = freshManager();
+    manager._currentYtdlpProc = { kill: jest.fn() };
+    manager.connection = { destroy: jest.fn() };
+    manager.stop();
+    expect(manager._currentYtdlpProc).toBeNull();
+  });
+
+  test('_buildResource kills previous yt-dlp process before starting a new one', async () => {
+    const manager = freshManager();
+    const oldProc = { kill: jest.fn() };
+    manager._currentYtdlpProc = oldProc;
+    await manager._buildResource(track());
+    expect(oldProc.kill).toHaveBeenCalledWith('SIGKILL');
   });
 });
