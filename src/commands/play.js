@@ -3,9 +3,19 @@ const youtube = require('../music/sources/youtube');
 const spotify = require('../music/sources/spotify');
 const navidrome = require('../music/sources/navidrome');
 const { getResolver } = require('../music/playlists');
+const { parseFlags } = require('../utils/parseFlags');
 
 const PLAYLIST_LIMIT = 50;
 const YT_URL_RE = /(?:youtube\.com\/(?:watch|shorts)|youtu\.be\/)/;
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 module.exports = {
   name: 'play',
@@ -13,7 +23,9 @@ module.exports = {
   description: 'Reproduce de YouTube, Spotify, o `nav:<búsqueda>` para Navidrome',
   usage: '<URL o búsqueda> | nav:<búsqueda>',
   async execute(message, args) {
-    if (!args.length) {
+    const { args: cleanArgs, flags } = parseFlags(args);
+
+    if (!cleanArgs.length) {
       return message.reply(`Uso: \`g!play <búsqueda o URL>\` · Para Navidrome: \`g!play nav:<búsqueda>\``);
     }
 
@@ -22,7 +34,7 @@ module.exports = {
       return message.reply('Tienes que estar en un canal de voz.');
     }
 
-    const input = args.join(' ');
+    const input = cleanArgs.join(' ');
     const manager = getManager(message.guildId);
 
     console.log(`[CMD:play] Input: "${input}" | Usuario: ${message.author.tag} | Canal: ${voiceChannel.name}`);
@@ -33,12 +45,14 @@ module.exports = {
       const resolver = getResolver(input);
       if (resolver) {
         const { name, tracks } = await resolver.resolve(input);
-        const limited = tracks.slice(0, PLAYLIST_LIMIT);
+        let limited = tracks.slice(0, PLAYLIST_LIMIT);
+        if (flags.has('shuffle')) limited = shuffleArray(limited);
         const wasIdle = await manager.addMany(limited, voiceChannel, message.channel);
         await message.reactions.removeAll().catch(() => {});
         const limitNote = tracks.length > PLAYLIST_LIMIT ? ` (mostrando ${PLAYLIST_LIMIT} de ${tracks.length})` : '';
+        const shuffleNote = flags.has('shuffle') ? ' 🔀' : '';
         const verb = wasIdle ? '▶️ Reproduciendo playlist' : '✅ Playlist añadida a la cola';
-        return message.reply(`${verb}: **${name}** — ${limited.length} canciones${limitNote}`);
+        return message.reply(`${verb}: **${name}** — ${limited.length} canciones${limitNote}${shuffleNote}`);
       }
 
       let track;
