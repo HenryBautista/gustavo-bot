@@ -12,7 +12,13 @@ Requires a `.env` file with at minimum `DISCORD_TOKEN` set. For Navidrome suppor
 
 For music commands (`g!play`, etc.) to work, **Message Content Intent** must be enabled in the Discord Developer Portal under Bot → Privileged Gateway Intents.
 
-No build step. No test suite.
+No build step. Run the test suite with:
+
+```
+npm test
+```
+
+Tests live in `tests/` and are picked up by Jest (`**/tests/**/*.test.js`).
 
 ## Architecture
 
@@ -37,6 +43,8 @@ src/
       youtube.js            ← play-dl search + getInfo
       spotify.js            ← Spotify oEmbed → YouTube search (no Spotify API creds needed)
       navidrome.js          ← Subsonic API: token auth + search + stream URL
+  utils/
+    parseFlags.js           ← strips --flag tokens from args; returns { args, flags: Set }
 ```
 
 ### Music flow
@@ -66,3 +74,17 @@ Uses the Subsonic API token method: for each request, a fresh `salt` is generate
 `g!play` `g!skip`/`g!s` `g!stop` `g!pause` `g!resume`/`g!r` `g!queue`/`g!q` `g!np` `g!help`/`g!h`
 
 Adding a new command: create `src/commands/yourcommand.js` exporting `{ name, aliases, description, execute(message, args) }`, then add `require('./yourcommand')` to `src/commands/index.js`.
+
+### Command flags
+
+Commands support `--flag` options appended anywhere in the argument list. `parseFlags(args)` (from `src/utils/parseFlags.js`) strips them out and returns `{ args, flags: Set<string> }` so the clean input reaches source detection unchanged.
+
+Currently supported flags:
+
+| Flag | Command | Behavior |
+|------|---------|----------|
+| `--shuffle` | `g!play` (playlists only) | Randomizes track order before queuing |
+
+Example: `g!play nav:pl:Favoritos --shuffle`
+
+Adding a flag to a new command: call `parseFlags(args)` at the top of `execute`, destructure `{ args: cleanArgs, flags }`, and branch on `flags.has('yourflag')`.
