@@ -44,7 +44,7 @@ module.exports = {
     try {
       const resolver = getResolver(input);
       if (resolver) {
-        const { name, tracks } = await resolver.resolve(input);
+        const { name, tracks } = await resolver.resolve(input, { limit: PLAYLIST_LIMIT });
         let limited = tracks.slice(0, PLAYLIST_LIMIT);
         if (flags.has('shuffle')) limited = shuffleArray(limited);
         const wasIdle = await manager.addMany(limited, voiceChannel, message.channel);
