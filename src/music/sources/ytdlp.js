@@ -53,7 +53,7 @@ function stream(url) {
     }
   });
 
-  return proc.stdout;
+  return { stream: proc.stdout, process: proc };
 }
 
 module.exports = { stream };

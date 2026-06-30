@@ -17,7 +17,15 @@ class GuildMusicManager {
     this.connection = null;
     this.voiceChannel = null;
     this.textChannel = null;
+    this._currentYtdlpProc = null;
     this._setupPlayerEvents();
+  }
+
+  _killCurrentYtdlpProc() {
+    if (this._currentYtdlpProc) {
+      try { this._currentYtdlpProc.kill('SIGKILL'); } catch (_) {}
+      this._currentYtdlpProc = null;
+    }
   }
 
   _setupPlayerEvents() {
@@ -59,6 +67,7 @@ class GuildMusicManager {
         newState.status === VoiceConnectionStatus.Disconnected
       ) {
         console.log(`[Music:${this.guildId}] Conexión perdida, limpiando estado`);
+        this._killCurrentYtdlpProc();
         this.connection = null;
         this.voiceChannel = null;
         this.queue = [];
@@ -128,6 +137,8 @@ class GuildMusicManager {
 
   async _buildResource(track) {
     try {
+      this._killCurrentYtdlpProc();
+
       if (track.source === 'navidrome') {
         const { buildStreamUrl } = require('./sources/navidrome');
         const url = buildStreamUrl(track.navSongId);
@@ -139,7 +150,8 @@ class GuildMusicManager {
       }
 
       console.log(`[Music:${this.guildId}] Obteniendo stream via yt-dlp: ${track.url}`);
-      const audioStream = ytdlpStream(track.url);
+      const { stream: audioStream, process: proc } = ytdlpStream(track.url);
+      this._currentYtdlpProc = proc;
       console.log(`[Music:${this.guildId}] Stream yt-dlp iniciado`);
       return createAudioResource(audioStream);
     } catch (err) {
@@ -172,6 +184,7 @@ class GuildMusicManager {
 
   stop() {
     console.log(`[Music:${this.guildId}] Stop: limpiando cola (${this.queue.length} tracks) y desconectando`);
+    this._killCurrentYtdlpProc();
     this.queue = [];
     this.currentTrack = null;
     this.player.stop(true);

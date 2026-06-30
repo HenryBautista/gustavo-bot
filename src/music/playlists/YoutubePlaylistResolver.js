@@ -7,7 +7,7 @@ function getBin() {
   return process.env.YTDLP_PATH || 'yt-dlp';
 }
 
-function runFlatPlaylist(url) {
+function runFlatPlaylist(url, limit) {
   return new Promise((resolve, reject) => {
     const args = [
       url,
@@ -15,6 +15,7 @@ function runFlatPlaylist(url) {
       '-J',
       '--quiet',
       '--no-warnings',
+      '--playlist-end', String(limit),
     ];
     if (process.env.FFMPEG_PATH) args.push('--ffmpeg-location', process.env.FFMPEG_PATH);
 
@@ -36,9 +37,10 @@ class YoutubePlaylistResolver extends BasePlaylistResolver {
     return PLAYLIST_URL_RE.test(input);
   }
 
-  async resolve(url) {
-    console.log(`[YTPlaylist] Resolviendo playlist: ${url}`);
-    const data = await runFlatPlaylist(url);
+  async resolve(url, options = {}) {
+    const limit = options.limit ?? 50;
+    console.log(`[YTPlaylist] Resolviendo playlist (máx ${limit}): ${url}`);
+    const data = await runFlatPlaylist(url, limit);
     const entries = data.entries ?? [];
     const tracks = entries.map((entry) => ({
       title: entry.title || 'Sin título',

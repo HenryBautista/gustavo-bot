@@ -73,7 +73,7 @@ describe('g!play — integración con flags', () => {
 
       await playCommand.execute(makeMessage(), ['nav:pl:rock', '--shuffle']);
 
-      expect(mockResolver.resolve).toHaveBeenCalledWith('nav:pl:rock');
+      expect(mockResolver.resolve).toHaveBeenCalledWith('nav:pl:rock', { limit: 50 });
     });
 
     test('sin --shuffle: addMany recibe los tracks en el orden original', async () => {

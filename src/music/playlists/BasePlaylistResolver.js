@@ -3,7 +3,7 @@ class BasePlaylistResolver {
     throw new Error('canResolve() not implemented');
   }
 
-  async resolve(_input) {
+  async resolve(_input, _options = {}) {
     throw new Error('resolve() not implemented');
   }
 }

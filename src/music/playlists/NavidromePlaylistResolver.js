@@ -6,7 +6,7 @@ class NavidromePlaylistResolver extends BasePlaylistResolver {
     return input.toLowerCase().startsWith('nav:pl:');
   }
 
-  async resolve(input) {
+  async resolve(input, options = {}) {
     const query = input.slice('nav:pl:'.length).trim();
     if (!query) throw new Error('Escribe un nombre o ID de playlist. Ej: `g!play nav:pl:Favoritos`');
 
