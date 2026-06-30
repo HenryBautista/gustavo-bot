@@ -5,7 +5,8 @@ Bot de Discord personal con reproducción de música desde YouTube, Spotify y Na
 ## Características
 
 - **Música** — reproduce desde YouTube (búsqueda o URL), URLs de Spotify, y tu librería privada en Navidrome
-- **Cola** — encola canciones, salta, pausa, reanuda y para
+- **Playlists** — encola playlists completas de YouTube o Navidrome, con soporte de shuffle (`--shuffle`)
+- **Cola** — encola canciones, salta, pausa, reanuda, para y limpia
 - **Saludos** — anuncia por voz con texto personalizado cuando usuarios conocidos entran al canal
 - **Calidad** — streaming de alta calidad vía yt-dlp con descifrado de URLs protegidas de YouTube
 - **Prefijo** — todos los comandos usan `g!` (configurable)
@@ -117,14 +118,25 @@ Crea un archivo `.env` en la raíz del proyecto basándote en `.env.example`:
 |---|---|---|
 | `g!play <búsqueda o URL>` | `g!p` | Reproduce desde YouTube (búsqueda o URL directa) |
 | `g!play <URL de Spotify>` | `g!p` | Resuelve la canción de Spotify y la reproduce desde YouTube |
-| `g!play nav:<búsqueda>` | `g!p nav:` | Busca y reproduce desde tu librería de Navidrome |
+| `g!play nav:<búsqueda>` | `g!p` | Busca y reproduce desde tu librería de Navidrome |
+| `g!play nav:pl:<nombre o ID>` | `g!p` | Encola una playlist de Navidrome por nombre (parcial) o ID numérico |
+| `g!play <URL playlist YouTube>` | `g!p` | Encola una playlist completa de YouTube |
 | `g!skip` | `g!s` | Salta la canción actual |
 | `g!stop` | — | Para la reproducción, limpia la cola y desconecta el bot |
 | `g!pause` | — | Pausa la reproducción |
 | `g!resume` | `g!r` | Reanuda la reproducción pausada |
 | `g!queue` | `g!q` | Muestra la cola actual (hasta 10 canciones) |
+| `g!clear` | `g!cl` | Vacía la cola (mantiene la canción actual) |
 | `g!np` | `g!nowplaying` | Muestra la canción que suena ahora |
 | `g!help` | `g!h` | Muestra la lista de comandos |
+
+### Opciones (flags)
+
+Los comandos aceptan `--flags` al final del input:
+
+| Flag | Aplica a | Comportamiento |
+|---|---|---|
+| `--shuffle` | `g!play` con playlist | Aleatoriza el orden antes de encolar |
 
 ### Ejemplos
 
@@ -133,8 +145,12 @@ g!play never gonna give you up
 g!play https://www.youtube.com/watch?v=dQw4w9WgXcQ
 g!play https://open.spotify.com/track/4PTG3Z6ehGkBFwjybzWkR8
 g!play nav:miles davis
+g!play nav:pl:Favoritos
+g!play nav:pl:Favoritos --shuffle
+g!play https://www.youtube.com/playlist?list=PLabc123 --shuffle
 g!queue
 g!skip
+g!clear
 ```
 
 ---
@@ -174,7 +190,7 @@ src/
     messageCreate.js         ← parser de prefijo g! y dispatcher
   commands/
     index.js                 ← registro de comandos (nombre + alias → módulo)
-    play.js  skip.js  stop.js  pause.js  resume.js  queue.js  nowplaying.js  help.js
+    play.js  skip.js  stop.js  pause.js  resume.js  queue.js  nowplaying.js  clear.js  help.js
   music/
     GuildMusicManager.js     ← cola + AudioPlayer + VoiceConnection por servidor
     sources/
@@ -182,21 +198,35 @@ src/
       spotify.js             ← resuelve URL de Spotify → busca en YouTube
       navidrome.js           ← API Subsonic: auth por token MD5 + búsqueda + stream
       ytdlp.js               ← streaming de audio vía yt-dlp
+    playlists/
+      index.js               ← getResolver(): detecta y despacha al resolver correcto
+      YoutubePlaylistResolver.js   ← descarga metadata de playlist con yt-dlp
+      NavidromePlaylistResolver.js ← resuelve playlist por nombre o ID en Navidrome
+  utils/
+    parseFlags.js            ← extrae --flags de los args; devuelve { args, flags: Set }
+tests/
+  sources/    playlists/    music/    commands/    utils/
 ```
 
 ### Flujo de música
 
 ```
-g!play <input>
+g!play <input> [--flags]
+  └─ parseFlags() separa flags del input
   └─ play.js detecta fuente
+       ├─ playlist  → getResolver() → resolver.resolve() → tracks[]
+       │    ├─ nav:pl:  → NavidromePlaylistResolver
+       │    └─ YT list  → YoutubePlaylistResolver
+       │         └─ [--shuffle] → shuffleArray(tracks)
+       │              └─ GuildMusicManager.addMany(tracks, voiceChannel)
        ├─ nav:      → navidrome.search()  → track con navSongId
        ├─ spotify   → spotify.resolveSpotifyUrl() → youtube.search()
        ├─ URL YT    → youtube.getInfo()
        └─ texto     → youtube.search()
-           └─ GuildMusicManager.add(track, voiceChannel)
-                └─ _buildResource()
-                     ├─ navidrome → fetch(buildStreamUrl(navSongId))
-                     └─ youtube   → ytdlp.stream(url)  [vía yt-dlp]
+            └─ GuildMusicManager.add(track, voiceChannel)
+                 └─ _buildResource()
+                      ├─ navidrome → fetch(buildStreamUrl(navSongId))
+                      └─ youtube   → ytdlp.stream(url)  [vía yt-dlp]
 ```
 
 ### Autenticación con Navidrome
@@ -206,6 +236,16 @@ Usa el método token del Subsonic API (v1.13+): la contraseña nunca viaja en te
 ### Por qué yt-dlp y no play-dl o ytdl-core
 
 `play-dl` y `ytdl-core` fallan en videos con URLs cifradas (videos oficiales, Vevo, etc.) porque no pueden ejecutar el JavaScript obfuscado de YouTube. `yt-dlp` resuelve esto usando Node.js como runtime JS (flag `--js-runtimes node:<path>`), que se pasa automáticamente con `process.execPath`.
+
+---
+
+## Tests
+
+```bash
+npm test
+```
+
+Los tests viven en `tests/` y usan Jest. Cubren las fuentes de Navidrome, los resolvers de playlist, el `GuildMusicManager`, el parser de flags y la integración de flags en `g!play`.
 
 ---
 
