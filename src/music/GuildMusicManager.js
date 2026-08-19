@@ -8,6 +8,54 @@ const {
 } = require('@discordjs/voice');
 const { stream: ytdlpStream } = require('./sources/ytdlp');
 
+// yt-dlp reports failures (403, unavailable video, geo-block) by exiting non-zero
+// with an empty stdout. Handing that empty stream to createAudioResource() makes the
+// player go straight to Idle, so the track is silently skipped with no user feedback.
+// Resolve only once real audio is buffered; reject otherwise.
+const STREAM_START_TIMEOUT_MS = 20000;
+
+function waitForStreamStart(stream, proc, timeoutMs = STREAM_START_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+
+    const finish = (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      stream.off('readable', onReadable);
+      stream.off('end', onEnd);
+      stream.off('error', onError);
+      proc.off('close', onClose);
+      if (err) reject(err);
+      else resolve();
+    };
+
+    // 'readable' signals buffered data without consuming it, so the resource still
+    // receives every byte.
+    const onReadable = () => {
+      if (stream.readableLength > 0) finish();
+      // A zero-length 'readable' means EOF; read(0) consumes nothing but lets 'end' fire.
+      else stream.read(0);
+    };
+    const onEnd = () => finish(new Error('yt-dlp cerró el stream sin enviar audio'));
+    const onError = (err) => finish(err);
+    const onClose = (code) => {
+      if (code !== 0 && stream.readableLength === 0) {
+        finish(new Error(`yt-dlp terminó con código ${code} sin enviar audio`));
+      }
+    };
+    const timer = setTimeout(
+      () => finish(new Error(`yt-dlp no envió audio en ${timeoutMs / 1000}s`)),
+      timeoutMs
+    );
+
+    stream.on('readable', onReadable);
+    stream.on('end', onEnd);
+    stream.on('error', onError);
+    proc.on('close', onClose);
+  });
+}
+
 class GuildMusicManager {
   constructor(guildId) {
     this.guildId = guildId;
@@ -152,6 +200,7 @@ class GuildMusicManager {
       console.log(`[Music:${this.guildId}] Obteniendo stream via yt-dlp: ${track.url}`);
       const { stream: audioStream, process: proc } = ytdlpStream(track.url);
       this._currentYtdlpProc = proc;
+      await waitForStreamStart(audioStream, proc);
       console.log(`[Music:${this.guildId}] Stream yt-dlp iniciado`);
       return createAudioResource(audioStream);
     } catch (err) {
