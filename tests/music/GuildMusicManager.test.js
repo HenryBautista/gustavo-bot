@@ -23,11 +23,18 @@ jest.mock('@discordjs/voice', () => ({
   joinVoiceChannel: jest.fn(() => mockConnection),
 }));
 
-const mockYtdlpProc = { kill: jest.fn() };
+const mockYtdlpProc = { kill: jest.fn(), on: jest.fn(), off: jest.fn() };
+// yt-dlp's stdout is a real Readable, and _buildResource now waits for it to yield
+// audio before playing, so the stub has to emit some bytes.
 jest.mock('../../src/music/sources/ytdlp', () => ({
-  stream: jest.fn(() => ({ stream: {}, process: mockYtdlpProc })),
+  stream: jest.fn(() => {
+    const { Readable } = require('stream');
+    return { stream: Readable.from([Buffer.from('fake audio')]), process: mockYtdlpProc };
+  }),
 }));
 
+const { createAudioResource } = require('@discordjs/voice');
+const { stream: ytdlpStream } = require('../../src/music/sources/ytdlp');
 const { getManager } = require('../../src/music/GuildMusicManager');
 
 const mockVoiceChannel = {
@@ -221,5 +228,21 @@ describe('GuildMusicManager — yt-dlp process cleanup', () => {
     manager._currentYtdlpProc = oldProc;
     await manager._buildResource(track());
     expect(oldProc.kill).toHaveBeenCalledWith('SIGKILL');
+  });
+
+  test('_buildResource devuelve un recurso cuando yt-dlp envía audio', async () => {
+    const manager = freshManager();
+    createAudioResource.mockReturnValue({ fake: 'resource' });
+    const resource = await manager._buildResource(track());
+    expect(resource).toEqual({ fake: 'resource' });
+  });
+
+  test('_buildResource devuelve null cuando yt-dlp cierra el stream sin audio', async () => {
+    const manager = freshManager();
+    const { Readable } = require('stream');
+    ytdlpStream.mockReturnValueOnce({ stream: Readable.from([]), process: mockYtdlpProc });
+    const resource = await manager._buildResource(track());
+    expect(resource).toBeNull();
+    expect(createAudioResource).not.toHaveBeenCalled();
   });
 });
